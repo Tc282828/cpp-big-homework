@@ -41,6 +41,7 @@ public:
     IMAGE imgLuxWarning;
     IMAGE imgLuxBoom;
     IMAGE imgHeart;
+    IMAGE imgWMist;
 
     bool hasBg;
     bool hasCover;
@@ -52,6 +53,7 @@ public:
     bool hasLuxWarning;
     bool hasLuxBoom;
     bool hasHeart;
+    bool hasWMist;
 
     Game();
 

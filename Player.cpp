@@ -5,6 +5,8 @@
 const int PLAYER_WINDOW_WIDTH = 960;
 const int PLAYER_WINDOW_HEIGHT = 540;
 const int PLAYER_DRAW_SIZE = 80;
+const int DEFENSE_KEEP_FRAME = 60;
+const int DEFENSE_COOLDOWN_FRAME = 300;
 
 void drawPngAlpha(int drawX, int drawY, IMAGE* image, bool cleanRotateBack);
 
@@ -21,7 +23,10 @@ void Player::reset()
     radius = 32;
     hp = 3;
     invincibleTimer = 0;
+    defenseTimer = 0;
+    defenseCooldown = 0;
     hurtState = false;
+    usingDefense = false;
 }
 
 void Player::handleInput()
@@ -45,6 +50,10 @@ void Player::handleInput()
     {
         moveX += speed;
     }
+    if (GetAsyncKeyState('J') & 0x8000)
+    {
+        startDefense();
+    }
 
     x += moveX;
     y += moveY;
@@ -63,6 +72,19 @@ void Player::update()
     }
 
     hurtState = invincibleTimer > 0;
+
+    if (defenseTimer > 0)
+    {
+        defenseTimer--;
+    }
+    if (defenseTimer <= 0)
+    {
+        usingDefense = false;
+    }
+    if (defenseCooldown > 0)
+    {
+        defenseCooldown--;
+    }
 }
 
 void Player::draw(IMAGE* idleImg, IMAGE* hurtImg, bool hasIdle, bool hasHurt)
@@ -104,8 +126,21 @@ void Player::hurt()
     hurtState = true;
 }
 
+void Player::startDefense()
+{
+    if (defenseCooldown <= 0 && defenseTimer <= 0)
+    {
+        defenseTimer = DEFENSE_KEEP_FRAME;
+        defenseCooldown = DEFENSE_COOLDOWN_FRAME;
+        usingDefense = true;
+    }
+}
+
 float Player::getX() const { return x; }
 float Player::getY() const { return y; }
 int Player::getRadius() const { return radius; }
 int Player::getHp() const { return hp; }
 bool Player::isInvincible() const { return invincibleTimer > 0; }
+bool Player::isUsingDefense() const { return usingDefense; }
+int Player::getDefenseTimer() const { return defenseTimer; }
+int Player::getDefenseCooldown() const { return defenseCooldown; }

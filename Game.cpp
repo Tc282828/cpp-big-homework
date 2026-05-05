@@ -8,6 +8,7 @@
 #include <windows.h>
 
 const int WIN_SURVIVE_FRAME = 60 * 60;
+const int W_MIST_DRAW_SIZE = 220;
 
 bool gameFileExists(LPCTSTR fileName)
 {
@@ -93,13 +94,22 @@ bool isPngBackColor(DWORD color, DWORD cornerColor[4], bool cleanRotateBack, boo
     int red = color & 0xff;
     int green = (color >> 8) & 0xff;
     int blue = (color >> 16) & 0xff;
+    int maxColor = red;
+    int minColor = red;
+
+    if (green > maxColor) maxColor = green;
+    if (blue > maxColor) maxColor = blue;
+    if (green < minColor) minColor = green;
+    if (blue < minColor) minColor = blue;
+
+    bool isGrayLike = maxColor - minColor < 35;
 
     if (cleanRotateBack && red < 8 && green < 8 && blue < 8)
     {
         return true;
     }
 
-    if (useWhiteBack && red > 190 && green > 190 && blue > 190)
+    if (useWhiteBack && isGrayLike && red > 185 && green > 185 && blue > 185)
     {
         return true;
     }
@@ -111,12 +121,21 @@ bool isPngBackColor(DWORD color, DWORD cornerColor[4], bool cleanRotateBack, boo
             int cornerRed = cornerColor[i] & 0xff;
             int cornerGreen = (cornerColor[i] >> 8) & 0xff;
             int cornerBlue = (cornerColor[i] >> 16) & 0xff;
+            int cornerMax = cornerRed;
+            int cornerMin = cornerRed;
+
+            if (cornerGreen > cornerMax) cornerMax = cornerGreen;
+            if (cornerBlue > cornerMax) cornerMax = cornerBlue;
+            if (cornerGreen < cornerMin) cornerMin = cornerGreen;
+            if (cornerBlue < cornerMin) cornerMin = cornerBlue;
+
+            bool cornerIsGrayLike = cornerMax - cornerMin < 35;
             int colorDistance =
                 abs(red - cornerRed) +
                 abs(green - cornerGreen) +
                 abs(blue - cornerBlue);
 
-            if (colorDistance < 120)
+            if (cornerIsGrayLike && isGrayLike && colorDistance < 90)
             {
                 return true;
             }
@@ -301,6 +320,7 @@ Game::Game()
     hasLuxWarning = false;
     hasLuxBoom = false;
     hasHeart = false;
+    hasWMist = false;
 }
 
 void Game::run()
@@ -343,9 +363,10 @@ void Game::loadResources()
     hasLuxWarning = gameLoadImage(&imgLuxWarning, _T("assets/Lux1.png"), 120, 120);
     hasLuxBoom = gameLoadImage(&imgLuxBoom, _T("assets/Lux2.png"), 120, 120);
     hasHeart = gameLoadImage(&imgHeart, _T("assets/hp.png"), 28, 28);
+    hasWMist = gameLoadImage(&imgWMist, _T("assets/w_mist.png"), 220, 220);
 
     resourcesReady = hasCover && hasEnd && hasBg && hasGwenIdle && hasGwenHurt
-        && hasEzQ && hasAsheR && hasLuxWarning && hasLuxBoom && hasHeart;
+        && hasEzQ && hasAsheR && hasLuxWarning && hasLuxBoom && hasHeart && hasWMist;
 }
 
 void Game::resetGame()
@@ -453,7 +474,11 @@ void Game::update()
 
         if (isHit)
         {
-            if (!player.isInvincible())
+            if (player.isUsingDefense())
+            {
+                skills[i].markDamaged();
+            }
+            else if (!player.isInvincible())
             {
                 player.hurt();
                 skills[i].markDamaged();
@@ -594,6 +619,13 @@ void Game::drawPlaying()
             hasEzQ, hasAsheR, hasLuxWarning, hasLuxBoom);
     }
 
+    if (player.isUsingDefense())
+    {
+        int mistX = (int)player.getX() - W_MIST_DRAW_SIZE / 2;
+        int mistY = (int)player.getY() - W_MIST_DRAW_SIZE / 2;
+        drawPngAlpha(mistX, mistY, &imgWMist, false);
+    }
+
     player.draw(&imgGwenIdle, &imgGwenHurt, hasGwenIdle, hasGwenHurt);
     drawUI();
 }
@@ -651,6 +683,21 @@ void Game::drawUI()
     }
     _stprintf_s(text, _T("难度阶段：%s"), stage);
     outtextxy(20, 122, text);
+
+    if (player.isUsingDefense())
+    {
+        _stprintf_s(text, _T("J防御：持续中"));
+    }
+    else if (player.getDefenseCooldown() > 0)
+    {
+        int coolSecond = player.getDefenseCooldown() / 60 + 1;
+        _stprintf_s(text, _T("J防御：冷却 %d 秒"), coolSecond);
+    }
+    else
+    {
+        _stprintf_s(text, _T("J防御：可用"));
+    }
+    outtextxy(20, 152, text);
 }
 
 void Game::drawResourceError()
