@@ -1,112 +1,12 @@
 #include "Skill.h"
 
-#include <cstdlib>
 #include <cmath>
 
 const int SKILL_WINDOW_WIDTH = 960;
 const int SKILL_WINDOW_HEIGHT = 540;
+const double PI = 3.14159265358979323846;
 
-// 画带透明效果的 PNG。技能图片旋转后也用它画，尽量避免黑底。
-void skillDrawPng(int drawX, int drawY, IMAGE* image)
-{
-    DWORD* screenBuffer = GetImageBuffer();
-    DWORD* imageBuffer = GetImageBuffer(image);
-
-    int screenWidth = getwidth();
-    int screenHeight = getheight();
-    int imageWidth = image->getwidth();
-    int imageHeight = image->getheight();
-
-    DWORD cornerColor[4];
-    cornerColor[0] = imageBuffer[0];
-    cornerColor[1] = imageBuffer[imageWidth - 1];
-    cornerColor[2] = imageBuffer[(imageHeight - 1) * imageWidth];
-    cornerColor[3] = imageBuffer[(imageHeight - 1) * imageWidth + imageWidth - 1];
-
-    bool hasAlpha = false;
-    for (int i = 0; i < imageWidth * imageHeight; i++)
-    {
-        int alpha = (imageBuffer[i] >> 24) & 0xff;
-        if (alpha > 0)
-        {
-            hasAlpha = true;
-            break;
-        }
-    }
-
-    for (int y = 0; y < imageHeight; y++)
-    {
-        int screenY = drawY + y;
-        if (screenY < 0 || screenY >= screenHeight)
-        {
-            continue;
-        }
-
-        for (int x = 0; x < imageWidth; x++)
-        {
-            int screenX = drawX + x;
-            if (screenX < 0 || screenX >= screenWidth)
-            {
-                continue;
-            }
-
-            DWORD sourceColor = imageBuffer[y * imageWidth + x];
-            int alpha = (sourceColor >> 24) & 0xff;
-            int sourceRed = sourceColor & 0xff;
-            int sourceGreen = (sourceColor >> 8) & 0xff;
-            int sourceBlue = (sourceColor >> 16) & 0xff;
-
-            bool isNearWhite = sourceRed > 225 && sourceGreen > 225 && sourceBlue > 225;
-            bool isNearBlack = sourceRed < 35 && sourceGreen < 35 && sourceBlue < 35;
-            bool isNearCornerColor = false;
-
-            for (int i = 0; i < 4; i++)
-            {
-                int cornerRed = cornerColor[i] & 0xff;
-                int cornerGreen = (cornerColor[i] >> 8) & 0xff;
-                int cornerBlue = (cornerColor[i] >> 16) & 0xff;
-
-                int colorDistance =
-                    abs(sourceRed - cornerRed) +
-                    abs(sourceGreen - cornerGreen) +
-                    abs(sourceBlue - cornerBlue);
-
-                if (colorDistance < 80)
-                {
-                    isNearCornerColor = true;
-                    break;
-                }
-            }
-
-            // 白底、黑边、以及和四个角接近的背景色都不画。
-            if (isNearWhite || isNearBlack || isNearCornerColor)
-            {
-                continue;
-            }
-
-            if (hasAlpha && alpha == 0)
-            {
-                continue;
-            }
-            if (!hasAlpha)
-            {
-                alpha = 255;
-            }
-
-            DWORD oldColor = screenBuffer[screenY * screenWidth + screenX];
-
-            int oldRed = oldColor & 0xff;
-            int oldGreen = (oldColor >> 8) & 0xff;
-            int oldBlue = (oldColor >> 16) & 0xff;
-
-            int newRed = (sourceRed * alpha + oldRed * (255 - alpha)) / 255;
-            int newGreen = (sourceGreen * alpha + oldGreen * (255 - alpha)) / 255;
-            int newBlue = (sourceBlue * alpha + oldBlue * (255 - alpha)) / 255;
-
-            screenBuffer[screenY * screenWidth + screenX] = RGB(newRed, newGreen, newBlue);
-        }
-    }
-}
+void drawPngAlpha(int drawX, int drawY, IMAGE* image, bool cleanRotateBack);
 
 Skill::Skill()
 {
@@ -127,7 +27,6 @@ Skill::Skill()
     angle = 0.0;
 }
 
-// 计算技能朝哪个方向飞。
 void Skill::setDirection(float targetX, float targetY)
 {
     float distanceX = targetX - x;
@@ -192,7 +91,6 @@ Skill Skill::createLuxE(float targetX, float targetY)
     return skill;
 }
 
-// 每帧更新技能位置。
 void Skill::update()
 {
     timer++;
@@ -215,7 +113,6 @@ void Skill::update()
     }
 }
 
-// 画技能。有图片就画图片，没有图片就画原来的图形占位技能。
 void Skill::draw(IMAGE* ezImg, IMAGE* asheImg, IMAGE* warningImg, IMAGE* boomImg,
     bool hasEz, bool hasAshe, bool hasWarning, bool hasBoom)
 {
@@ -233,34 +130,14 @@ void Skill::draw(IMAGE* ezImg, IMAGE* asheImg, IMAGE* warningImg, IMAGE* boomImg
         {
             if (hasWarning)
             {
-                skillDrawPng(drawX, drawY, warningImg);
-            }
-            else
-            {
-                setlinecolor(RGB(255, 70, 70));
-                setlinestyle(PS_SOLID, 3);
-                circle((int)x, (int)y, radius);
-                setlinestyle(PS_DOT, 1);
-                circle((int)x, (int)y, radius - 12);
-                setlinestyle(PS_SOLID, 1);
+                drawPngAlpha(drawX, drawY, warningImg, false);
             }
         }
         else
         {
             if (hasBoom)
             {
-                skillDrawPng(drawX, drawY, boomImg);
-            }
-            else
-            {
-                setfillcolor(RGB(255, 118, 45));
-                solidcircle((int)x, (int)y, radius);
-                setfillcolor(RGB(255, 220, 80));
-                solidcircle((int)x, (int)y, radius / 2);
-                setlinecolor(RGB(255, 55, 35));
-                setlinestyle(PS_SOLID, 4);
-                circle((int)x, (int)y, radius);
-                setlinestyle(PS_SOLID, 1);
+                drawPngAlpha(drawX, drawY, boomImg, false);
             }
         }
         return;
@@ -274,57 +151,26 @@ void Skill::draw(IMAGE* ezImg, IMAGE* asheImg, IMAGE* warningImg, IMAGE* boomImg
         isImageLoaded = hasAshe;
     }
 
-    if (isImageLoaded)
+    if (!isImageLoaded)
     {
-        IMAGE rotatedImage;
-        rotateimage(&rotatedImage, skillImage, angle, BLACK, true, true);
-
-        int drawWidth = rotatedImage.getwidth();
-        int drawHeight = rotatedImage.getheight();
-        int drawX = (int)x - drawWidth / 2;
-        int drawY = (int)y - drawHeight / 2;
-
-        skillDrawPng(drawX, drawY, &rotatedImage);
         return;
     }
 
-    float cosValue = cos(angle);
-    float sinValue = sin(angle);
-    int x1 = (int)(x - cosValue * width * 0.5f);
-    int y1 = (int)(y - sinValue * width * 0.5f);
-    int x2 = (int)(x + cosValue * width * 0.5f);
-    int y2 = (int)(y + sinValue * width * 0.5f);
-
+    double drawAngle = angle;
     if (type == EZ_Q)
     {
-        setlinecolor(RGB(80, 180, 255));
-        setlinestyle(PS_SOLID, 10);
-        line(x1, y1, x2, y2);
-        setlinecolor(RGB(210, 245, 255));
-        setlinestyle(PS_SOLID, 4);
-        line(x1, y1, x2, y2);
-        setfillcolor(RGB(120, 210, 255));
-        solidcircle(x2, y2, 8);
-    }
-    else
-    {
-        setlinecolor(RGB(150, 235, 255));
-        setlinestyle(PS_SOLID, 14);
-        line(x1, y1, x2, y2);
-        setlinecolor(RGB(235, 255, 255));
-        setlinestyle(PS_SOLID, 5);
-        line(x1, y1, x2, y2);
-
-        POINT arrow[3] = {
-            {x2, y2},
-            {(LONG)(x2 - cosValue * 24 - sinValue * 14), (LONG)(y2 - sinValue * 24 + cosValue * 14)},
-            {(LONG)(x2 - cosValue * 24 + sinValue * 14), (LONG)(y2 - sinValue * 24 - cosValue * 14)}
-        };
-        setfillcolor(RGB(180, 245, 255));
-        solidpolygon(arrow, 3);
+        drawAngle += PI;
     }
 
-    setlinestyle(PS_SOLID, 1);
+    IMAGE rotatedImage;
+    rotateimage(&rotatedImage, skillImage, drawAngle, BLACK, true, true);
+
+    int drawWidth = rotatedImage.getwidth();
+    int drawHeight = rotatedImage.getheight();
+    int drawX = (int)x - drawWidth / 2;
+    int drawY = (int)y - drawHeight / 2;
+
+    drawPngAlpha(drawX, drawY, &rotatedImage, true);
 }
 
 bool Skill::isActive() const { return active; }

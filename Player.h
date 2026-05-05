@@ -6,7 +6,6 @@
 
 #include <graphics.h>
 
-// 玩家类：保存格温的位置、血量和受伤无敌状态。
 class Player
 {
 public:

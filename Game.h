@@ -6,7 +6,7 @@
 #include <graphics.h>
 #include <vector>
 
-// 游戏状态。
+// 游戏当前处在哪个界面
 enum GameState
 {
     MENU,
@@ -15,7 +15,6 @@ enum GameState
     GAME_OVER
 };
 
-// Game 类：负责资源、输入、更新、绘制和主循环。
 class Game
 {
 public:
@@ -30,6 +29,7 @@ public:
     int spawnTimer;
     int spawnInterval;
     bool running;
+    bool resourcesReady;
 
     IMAGE imgBg;
     IMAGE imgCover;
@@ -67,6 +67,7 @@ public:
     void drawPlaying();
     void drawWin();
     void drawGameOver();
-    void drawFallbackMap();
     void drawUI();
+    void drawResourceError();
+    void getRandomEdgePoint(float* startX, float* startY);
 };

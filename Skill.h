@@ -6,7 +6,7 @@
 
 #include <graphics.h>
 
-// 敌方技能类型。
+// 敌方技能类型
 enum SkillType
 {
     EZ_Q,
@@ -14,7 +14,6 @@ enum SkillType
     LUX_E
 };
 
-// 技能类：表示飞行弹道或 Lux E 范围技能。
 class Skill
 {
 public:
