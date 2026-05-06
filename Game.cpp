@@ -828,6 +828,8 @@ void Game::spawnSkill()
         if (luxY > height - 80.0f) luxY = (float)(height - 80);
 
         skills.push_back(Skill::createLuxE(luxX, luxY));
+        // Lux E 预警圈出现时播放提示音效
+        playSoundEffect(_T("assets/sounds/lux.wav"));
     }
 }
 
