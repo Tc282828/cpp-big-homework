@@ -98,5 +98,13 @@
     <ClInclude Include="Collision.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="CopyAssets" AfterTargets="Build">
+    <ItemGroup>
+      <AssetFiles Include="$(ProjectDir)assets\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(AssetFiles)"
+          DestinationFiles="@(AssetFiles->'$(OutDir)assets\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
   <ImportGroup Label="ExtensionTargets" />
 </Project>

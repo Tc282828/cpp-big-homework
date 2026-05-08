@@ -34,61 +34,11 @@ bool playSoundIfExists(LPCTSTR soundPath)
 
 void playSoundEffect(const TCHAR* soundPath)
 {
-    // 先按代码里写的相对路径找
-    if (playSoundIfExists(soundPath))
-    {
-        return;
-    }
-
-    TCHAR currentPath[MAX_PATH];
-    GetCurrentDirectory(MAX_PATH, currentPath);
-
-    // 有时 VS 的运行目录在项目上一级，所以多尝试一次 GwenDodgeGame 子目录
-    TCHAR tryPath[MAX_PATH];
-    _stprintf_s(tryPath, _T("%s\\GwenDodgeGame\\%s"), currentPath, soundPath);
-    if (playSoundIfExists(tryPath))
-    {
-        return;
-    }
-
-    TCHAR exePath[MAX_PATH];
-    GetModuleFileName(NULL, exePath, MAX_PATH);
-
-    // 找到 exe 所在文件夹，方便从输出目录反推 assets 目录
-    int lastSlash = -1;
-    for (int i = 0; exePath[i] != _T('\0'); i++)
-    {
-        if (exePath[i] == _T('\\') || exePath[i] == _T('/'))
-        {
-            lastSlash = i;
-        }
-    }
-
-    if (lastSlash >= 0)
-    {
-        exePath[lastSlash] = _T('\0');
-
-        // 尝试 exe 同级目录
-        _stprintf_s(tryPath, _T("%s\\%s"), exePath, soundPath);
-        if (playSoundIfExists(tryPath))
-        {
-            return;
-        }
-
-        // 尝试 exe 上两级目录，适配 bin/Debug 这种输出路径
-        _stprintf_s(tryPath, _T("%s\\..\\..\\%s"), exePath, soundPath);
-        if (playSoundIfExists(tryPath))
-        {
-            return;
-        }
-
-        // 尝试上两级后再进入项目目录
-        _stprintf_s(tryPath, _T("%s\\..\\..\\GwenDodgeGame\\%s"), exePath, soundPath);
-        playSoundIfExists(tryPath);
-    }
+    // 音效统一从 assets/sounds 文件夹读取
+    playSoundIfExists(soundPath);
 }
 
-// 判断文件是否存在，图片和音效加载都会用到类似思路
+// 判断文件是否存在
 bool gameFileExists(LPCTSTR fileName)
 {
     DWORD fileInfo = GetFileAttributes(fileName);
@@ -105,65 +55,11 @@ bool gameFileExists(LPCTSTR fileName)
 
 bool gameLoadImage(IMAGE* image, LPCTSTR fileName, int imageWidth, int imageHeight)
 {
-    // 第一种情况：直接从当前运行目录找 assets
+    // 图片统一从 assets 文件夹读取
     if (gameFileExists(fileName))
     {
         loadimage(image, fileName, imageWidth, imageHeight, true);
         return true;
-    }
-
-    TCHAR currentPath[MAX_PATH];
-    GetCurrentDirectory(MAX_PATH, currentPath);
-
-    // 第二种情况：当前目录下面还有一个项目文件夹
-    TCHAR tryPath[MAX_PATH];
-    _stprintf_s(tryPath, _T("%s\\GwenDodgeGame\\%s"), currentPath, fileName);
-    if (gameFileExists(tryPath))
-    {
-        loadimage(image, tryPath, imageWidth, imageHeight, true);
-        return true;
-    }
-
-    TCHAR exePath[MAX_PATH];
-    GetModuleFileName(NULL, exePath, MAX_PATH);
-
-    // 第三种情况：从 exe 所在目录往回找资源
-    int lastSlash = -1;
-    for (int i = 0; exePath[i] != _T('\0'); i++)
-    {
-        if (exePath[i] == _T('\\') || exePath[i] == _T('/'))
-        {
-            lastSlash = i;
-        }
-    }
-
-    if (lastSlash >= 0)
-    {
-        exePath[lastSlash] = _T('\0');
-
-        // 尝试 exe 同级目录
-        _stprintf_s(tryPath, _T("%s\\%s"), exePath, fileName);
-        if (gameFileExists(tryPath))
-        {
-            loadimage(image, tryPath, imageWidth, imageHeight, true);
-            return true;
-        }
-
-        // 尝试 exe 上两级目录
-        _stprintf_s(tryPath, _T("%s\\..\\..\\%s"), exePath, fileName);
-        if (gameFileExists(tryPath))
-        {
-            loadimage(image, tryPath, imageWidth, imageHeight, true);
-            return true;
-        }
-
-        // 尝试 exe 上两级后再进入项目目录
-        _stprintf_s(tryPath, _T("%s\\..\\..\\GwenDodgeGame\\%s"), exePath, fileName);
-        if (gameFileExists(tryPath))
-        {
-            loadimage(image, tryPath, imageWidth, imageHeight, true);
-            return true;
-        }
     }
 
     return false;
